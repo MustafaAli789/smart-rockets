@@ -1,0 +1,28 @@
+#canvas{
+    border: 1px solid black;
+}
+body{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+#btnContainer{
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+}
+.actionBtn{
+    width: 200px;
+    height: 30px;
+    background-color: black;
+    border: 1px solid black;
+    color: white;
+    margin: 5px;
+}
+.actionBtn:hover{
+    cursor: pointer;
+    background-color: white;
+    color: black;
+    transition: 0.3s;
+}
