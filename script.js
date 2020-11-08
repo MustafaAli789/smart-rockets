@@ -2,6 +2,7 @@
 let canvas = document.getElementById("canvas");
 let ctx = canvas.getContext("2d");
 let blocks = []
+let population = []
  let colorEnum = {
      TARGET: "#f50000",
      OBSTACLE: "#ffffff",
@@ -14,9 +15,9 @@ let blocks = []
  let cWidth = canvasWidth/cNumRow;
  let cHeight = canvasHeight/cNumCol;
  let targetBlock;
- let lifespan = 400
- let count = 0
- let maxforce = 0.2
+ let lifespan = 200
+ let count = 4
+ let maxforce = 0.1
 
 //HELPER METODS
 getMousePos = (canvas, evt) => {
@@ -63,12 +64,12 @@ function Vector(x,y) {
     if (x){
         this.x = x
     } else {
-        this.x = getRandomNumber(0, canvasWidth)
+        this.x = getRandomNumber(-1*canvasWidth, canvasWidth)
     }
     if(y) {
         this.y=y
     } else {
-        this.y = getRandomNumber(0, canvasHeight)
+        this.y = getRandomNumber(-1*canvasHeight, canvasHeight)
     }
 
     this.mult = (scalar) => {
@@ -81,7 +82,7 @@ function Vector(x,y) {
     }
 
     this.limit = (limit) => {
-        if (this.getMag > limit) {
+        if (this.getMag() > limit) {
             this.normalize()
             this.x *= limit
             this.y *= limit
@@ -103,6 +104,11 @@ function Vector(x,y) {
     this.add = (vector2) => {
         this.x += vector2.x
         this.y += vector2.y
+    }
+
+    this.sub = (vector2) => {
+        this.x -= vector2.x
+        this.y -= vector2.y
     }
 }
 
@@ -145,15 +151,29 @@ function DNA(genes) {
     }
 }
 
-function Population{
-    //
+function Population() {
+    this.rockets = []
+    this.popsize = 50
+
+    for (var i = 0; i < this.popsize; i++) {
+        this.rockets[i] = new Rocket();
+    }
+
+    this.run = function() {
+        for (var i = 0; i < this.popsize; i++) {
+          this.rockets[i].update();
+          this.rockets[i].show();
+        }
+    }
 }
 
 function Rocket(dna) {
     let startingPos = translateRowColToPos(74, 38)
-    this.pos = new Vector(pos.x, pos.y)
+    this.pos = new Vector(startingPos.x, startingPos.y)
     this.vel = new Vector()
+    this.vel.limit(4)
     this.acc = new Vector()
+    this.acc.mult(0)
     this.fitness = 0
 
     this.completed = false
@@ -208,8 +228,9 @@ function Rocket(dna) {
 
         this.applyForce(this.dna.genes[count])
         if (!this.completed && !this.crashed) {
-            this.vel.add(this.acc);
-            this.pos.add(this.vel);
+            this.vel.add(this.acc); 
+            this.pos.x += this.vel.x; 
+            this.pos.y -= this.vel.y //substract because pos vel is acc decreasing y (a.k.a going up)
             this.acc.mult(0);
             this.vel.limit(4);
         }
@@ -219,19 +240,22 @@ function Rocket(dna) {
 
         let headingAngleRad = Math.atan(this.vel.y/this.vel.x) * -1 //the -1 is because canvas renders angles backwards (i.e neg angle is up, pos angle is down)
 
-        // Matrix transformation
-        ctx.translate(this.pos.x, this.pos.y); //rotate around center of rocket
+        let rocketCenterX = this.pos.x + cWidth/2
+        let rocketCenterY = this.pos.y + cHeight/2
+
+        //Matrix transformation
+        ctx.translate(rocketCenterX, rocketCenterY); //rotate around center of rocket
         ctx.rotate(headingAngleRad);
-        ctx.translate(this.pos.x, this.pos.y);
+        ctx.translate(-1*rocketCenterX, -1*rocketCenterY);
 
         // Rotated rectangle
-        ctx.fillStyle = colorEnum.ROCKET;
-        ctx.fillRect(this.pos.x, this.pos.y, cWidth, cHeight*2);
+        ctx.fillStyle = colorEnum.OBSTACLE;
+        ctx.fillRect(this.pos.x, this.pos.y, cHeight*2, cWidth);
 
         //Undo transformations
-        ctx.translate(-1*this.pos.x, -1*this.pos.y);
+        ctx.translate(rocketCenterX, rocketCenterY);
         ctx.rotate(-1*headingAngleRad);
-        ctx.translate(-1*this.pos.x, -1*this.pos.y);
+        ctx.translate(-1*rocketCenterX, -1*rocketCenterY);
     }
     
 }
@@ -262,14 +286,25 @@ drawBlocks = () => {
 init = () => {
     targetBlock = new Block(2, 20, true)
     blocks.push(targetBlock)
+    population = new Population()
+    window.setInterval(draw, 1000/60)
 }
 
 draw = () => {
     clearGrid();
     drawGrid();
     drawBlocks();
+    population.run()
+
+    count++
+
+    if (count == lifespan) {
+        count = 0
+        population = new Population()
+    }
+
+    console.log("sup")
+
 }
 
 init();
-
-window.setTimeout(draw, 1000)
