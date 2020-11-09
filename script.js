@@ -128,7 +128,7 @@ function DNA(genes) {
     
     this.crossover = function(partner) {
         var newgenes = [];
-        var mid = floor(random(this.genes.length));
+        var mid = Math.floor(getRandomNumber(0, this.genes.length));
         for (var i = 0; i < this.genes.length; i++) {
             if (i > mid) {
                 newgenes[i] = this.genes[i];
@@ -195,10 +195,25 @@ function Population() {
           }
     };
 
-    for(var i = 0; i < this.popsize; i++){
-        this.rockets[i].calcFitness
-    }
+    this.selection = function() {
+        var newRockets = [];
+        for (var i = 0; i < this.rockets.length; i++) {
+          // Picks random dna
+          var parentA = random(this.mating).dna;
+          var parentB = random(this.mating).dna;
+          // Creates child by using crossover function
+          var child = parentA.crossover(parentB);
+          child.mutation();
+          // Creates new rockSet with child dna
+          newRockets[i] = new Rocket(child);
+        }
+        // This instance of rockets are the new rockets
+        this.rockets = newRockets;
+      };
+}
 
+function random(array){
+    return array[Math.floor(Math.random() * (array.length - 0) ) + 0];
 }
 
 function Rocket(dna) {
@@ -234,7 +249,7 @@ function Rocket(dna) {
     this.calcFitness = () => {
         let dist = this.getDistToTarget();
 
-        this.fitness = canvasWidth - d;
+        this.fitness = canvasWidth - dist;
         if (this.completed) {
             this.fitness *= 10
         }
@@ -329,12 +344,13 @@ draw = () => {
     drawGrid();
     drawBlocks();
     population.run()
-
+    
     count++
 
     if (count == lifespan) {
-        count = 0
-        population = new Population()
+        population.evaluate();
+        population.selection()
+        count = 0;
     }
 
     console.log("sup")
