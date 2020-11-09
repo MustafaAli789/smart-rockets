@@ -155,16 +155,50 @@ function Population() {
     this.rockets = []
     this.popsize = 50
 
-    for (var i = 0; i < this.popsize; i++) {
+    //adds new rocket to the population
+    for (var i = 0; i < this.popsize; i++) { 
         this.rockets[i] = new Rocket();
     }
 
+    //updates and shows the rocket synchronously 
     this.run = function() {
         for (var i = 0; i < this.popsize; i++) {
           this.rockets[i].update();
           this.rockets[i].show();
         }
     }
+
+    //evaluate fxn calls the fitness class, if greater than max, make max equal to current
+    this.evaluate = function(){
+        var maxfit = 0;
+        for (var i = 0; i < this.popsize; i++){
+            this.rockets[i].calcFitness();
+        
+            if(this.rockets[i].fitness > maxfit){
+                maxfit = this.rockets[i].fitness;
+            }
+        }
+
+        //normalizes the rocket
+        for (var i = 0; i < this.popsize; i++){
+            this.rockets[i].fitness /= maxfit;
+        }
+        
+        this.mating = [];
+        //takes rocket fitness and makes in to scale of 1 to 100
+        //rocket with high fitness = be in mating array, otherwise not
+        for (var i = 0; i < this.popsize; i++) {
+            var n = this.rockets[i].fitness * 100;
+            for (var j = 0; j < n; j++) {
+              this.mating.push(this.rockets[i]);
+            }
+          }
+    };
+
+    for(var i = 0; i < this.popsize; i++){
+        this.rockets[i].calcFitness
+    }
+
 }
 
 function Rocket(dna) {
