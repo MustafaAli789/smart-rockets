@@ -55,6 +55,7 @@ function Block(row, col, target) {
     } else {
         this.color = colorEnum.OBSTACLE
     }
+
 }
 
 function Vector(x,y) {
@@ -238,8 +239,9 @@ function Rocket(dna) {
         this.acc.add(force)
     }
 
+    //this gets distance to the target block
     this.getDistToTarget = () => {
-        let targetPos = translateRowColToPos(targetBlock.row, targetBlock.col)
+        let targetPos = translateRowColToPos(targetblock1.row, targetblock1.col);
         let xDiff = this.pos.x - targetPos.x
         let yDiff = this.pos.y - targetPos.y
         let dist = Math.sqrt( xDiff*xDiff + yDiff*yDiff );
@@ -261,7 +263,7 @@ function Rocket(dna) {
     this.update = ()=>{
        let dist = this.getDistToTarget()
        if (dist < 10) {
-           let targetPos = translateRowColToPos(targetBlock.row, targetBlock.col)
+           let targetPos = translateRowColToPos(targetblock1.row, targetblock1.col)
            this.completed = true
            this.pos.x = targetPos.x
            this.pos.y = targetPos.y
@@ -309,6 +311,14 @@ function Rocket(dna) {
     
 }
 
+    function reset() {
+        var reset = confirm("Want to reset");
+        if (reset) {
+            ctx.clearRect(0, 0, w, h);
+            document.getElementById("canvasimg").style.display = "none";
+        }
+    }
+
 
 //DRAWING METHODS
 drawGrid = () => {
@@ -333,8 +343,20 @@ drawBlocks = () => {
 }
 
 init = () => {
-    targetBlock = new Block(2, 20, true)
-    blocks.push(targetBlock)
+    targetblock1 = new Block(37,37,true)
+    obstacle1 = new Block(20,30,false)
+    obstacle2 = new Block(10,25,false)
+    obstacle3 = new Block(50,50,false)
+    obstacle4 = new Block(75,70,false)
+    obstacle5 = new Block(85,80,false)
+    obstacle6 = new Block(55,50,false)
+    
+    blocks.push(targetblock1)
+    blocks.push(obstacle1)
+    blocks.push(obstacle2)
+    blocks.push(obstacle3)
+    blocks.push(obstacle4)
+
     population = new Population()
     window.setInterval(draw, 1000/60)
 }
@@ -344,7 +366,7 @@ draw = () => {
     drawGrid();
     drawBlocks();
     population.run()
-    
+
     count++
 
     if (count == lifespan) {
