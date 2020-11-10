@@ -8,16 +8,17 @@ let population = []
      OBSTACLE: "#ffffff",
      ROCKET: "rgba(232,232, 232, 0.5)"
  }
- let canvasHeight = 750;
- let canvasWidth = 750;
- let cNumRow = 75;
- let cNumCol = 75;
+ let canvasHeight = 350;
+ let canvasWidth = 350;
+ let cNumRow = 35;
+ let cNumCol = 35;
  let cWidth = canvasWidth/cNumRow;
  let cHeight = canvasHeight/cNumCol;
  let targetBlock;
- let lifespan = 200
+ let lifespan = 400
  let count = 4
- let maxforce = 0.1
+ let maxforce = 0.2
+ let simulationStart = false
 
 //HELPER METODS
 getMousePos = (canvas, evt) => {
@@ -35,8 +36,19 @@ translateRowColToPos = (row, col) => {
     }
 }
 
+translatePosToRowCol = (x, y) => {
+    return {
+        col: Math.ceil(x/cWidth)-1,
+        row: Math.ceil(y/cHeight)-1
+    }
+}
+
 getRandomNumber = (min, max) => {
-    return Math.floor(Math.random() * (max - min) ) + min;
+    return Math.random() * (max - min) + min;
+}
+
+function randomElementFromArray(array){
+    return array[Math.floor(Math.random() * (array.length - 0) ) + 0];
 }
 
 //CLASSES
@@ -129,7 +141,7 @@ function DNA(genes) {
     
     this.crossover = function(partner) {
         var newgenes = [];
-        var mid = Math.floor(getRandomNumber(0, this.genes.length));
+        var mid = Math.floor(this.genes.length/2);
         for (var i = 0; i < this.genes.length; i++) {
             if (i > mid) {
                 newgenes[i] = this.genes[i];
@@ -144,7 +156,7 @@ function DNA(genes) {
     // Adds random mutation to the genes to add variance.
     this.mutation = function() {
         for (var i = 0; i < this.genes.length; i++) {
-            if (random(1) < 0.01) {
+            if (getRandomNumber(0, 1) < 0.01) {
                 this.genes[i] = new Vector();
                 this.genes[i].setMag(maxforce);
             }
@@ -154,7 +166,7 @@ function DNA(genes) {
 
 function Population() {
     this.rockets = []
-    this.popsize = 50
+    this.popsize = 25
 
     //adds new rocket to the population
     for (var i = 0; i < this.popsize; i++) { 
@@ -179,6 +191,7 @@ function Population() {
                 maxfit = this.rockets[i].fitness;
             }
         }
+        console.log(maxfit)
 
         //normalizes the rocket
         for (var i = 0; i < this.popsize; i++){
@@ -200,8 +213,8 @@ function Population() {
         var newRockets = [];
         for (var i = 0; i < this.rockets.length; i++) {
           // Picks random dna
-          var parentA = random(this.mating).dna;
-          var parentB = random(this.mating).dna;
+          var parentA = randomElementFromArray(this.mating).dna;
+          var parentB = randomElementFromArray(this.mating).dna;
           // Creates child by using crossover function
           var child = parentA.crossover(parentB);
           child.mutation();
@@ -213,15 +226,12 @@ function Population() {
       };
 }
 
-function random(array){
-    return array[Math.floor(Math.random() * (array.length - 0) ) + 0];
-}
-
 function Rocket(dna) {
-    let startingPos = translateRowColToPos(74, 38)
+    let startingPos = translateRowColToPos(34, 17)
     this.pos = new Vector(startingPos.x, startingPos.y)
-    this.vel = new Vector()
-    this.vel.limit(4)
+    this.vel = new Vector(0, 0)
+    this.vel.mult(0)
+    //if (this.vel.y < 0) this.vel.y*=-1;
     this.acc = new Vector()
     this.acc.mult(0)
     this.fitness = 0
@@ -240,20 +250,21 @@ function Rocket(dna) {
     }
 
     //this gets distance to the target block
-    this.getDistToTarget = () => {
-        let targetPos = translateRowColToPos(targetblock1.row, targetblock1.col);
+    this.getDistToBlock = (block) => {
+        let targetPos = translateRowColToPos(block.row, block.col);
         let xDiff = this.pos.x - targetPos.x
         let yDiff = this.pos.y - targetPos.y
         let dist = Math.sqrt( xDiff*xDiff + yDiff*yDiff );
+        //console.log(dist)
         return dist
     }
 
     this.calcFitness = () => {
-        let dist = this.getDistToTarget();
+        let dist = this.getDistToBlock(targetBlock);
 
         this.fitness = canvasWidth - dist;
         if (this.completed) {
-            this.fitness *= 10
+            this.fitness *= 20
         }
         if (this.crashed) {
             this.fitness /= 10
@@ -261,9 +272,9 @@ function Rocket(dna) {
     }
 
     this.update = ()=>{
-       let dist = this.getDistToTarget()
+       let dist = this.getDistToBlock(targetBlock)
        if (dist < 10) {
-           let targetPos = translateRowColToPos(targetblock1.row, targetblock1.col)
+           let targetPos = translateRowColToPos(targetBlock.row, targetBlock.col)
            this.completed = true
            this.pos.x = targetPos.x
            this.pos.y = targetPos.y
@@ -273,6 +284,12 @@ function Rocket(dna) {
             this.crashed = true;
         }
         
+        blocks.forEach(block => {
+            if (this.getDistToBlock(block) <= 5 && block!= targetBlock) {
+                this.crashed = true;
+            }
+        })
+
         if (this.pos.y > canvasHeight || this.pos.y < 0) {
             this.crashed = true;
         }
@@ -308,17 +325,7 @@ function Rocket(dna) {
         ctx.rotate(-1*headingAngleRad);
         ctx.translate(-1*rocketCenterX, -1*rocketCenterY);
     }
-    
 }
-
-    function reset() {
-        var reset = confirm("Want to reset");
-        if (reset) {
-            ctx.clearRect(0, 0, w, h);
-            document.getElementById("canvasimg").style.display = "none";
-        }
-    }
-
 
 //DRAWING METHODS
 drawGrid = () => {
@@ -343,40 +350,61 @@ drawBlocks = () => {
 }
 
 init = () => {
-    targetblock1 = new Block(37,37,true)
-    obstacle1 = new Block(20,30,false)
-    obstacle2 = new Block(10,25,false)
-    obstacle3 = new Block(50,50,false)
-    obstacle4 = new Block(75,70,false)
-    obstacle5 = new Block(85,80,false)
-    obstacle6 = new Block(55,50,false)
-    
-    blocks.push(targetblock1)
-    blocks.push(obstacle1)
-    blocks.push(obstacle2)
-    blocks.push(obstacle3)
-    blocks.push(obstacle4)
-
+    targetBlock = new Block(10,17,true)
+    blocks.push(targetBlock)
     population = new Population()
-    window.setInterval(draw, 1000/60)
+
+    window.addEventListener('click', (event)=>{
+        if (!simulationStart) {
+            let mousePos = getMousePos(canvas, event)
+            let rowColPos = translatePosToRowCol(mousePos.x, mousePos.y)
+
+            //to remove an exisitng block bvy clcking on it
+            for(let i =blocks.length-1; i>=0;i--){
+                let block = blocks[i]
+                if (block.row == rowColPos.row && block.col == rowColPos.col) {
+                    blocks.splice(i, 1)
+                    return
+                }
+            }
+            blocks.push(new Block(rowColPos.row, rowColPos.col))
+            console.log(rowColPos)
+        }
+    })
+
+    document.querySelector("#startBtn").addEventListener('click', (event)=>{
+        if (!simulationStart) {
+            simulationStart = true
+        }
+    })
+
+    document.querySelector("#resetBtn").addEventListener('click', (event)=>{
+        if (simulationStart) {
+            simulationStart = false
+            population = new Population();
+            count=0;
+        }
+    })
+
+    window.setInterval(draw, 1)
 }
 
 draw = () => {
     clearGrid();
     drawGrid();
     drawBlocks();
-    population.run()
 
-    count++
+    if (simulationStart) {
+        population.run()
 
-    if (count == lifespan) {
-        population.evaluate();
-        population.selection()
-        count = 0;
+        count++
+    
+        if (count == lifespan) {
+            population.evaluate();
+            population.selection()
+            count = 0;
+        }
     }
-
-    console.log("sup")
-
 }
 
 init();
